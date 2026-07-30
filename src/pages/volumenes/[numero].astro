@@ -1,0 +1,67 @@
+---
+import Base from '../../layouts/Base.astro';
+import Tarjeta from '../../components/Tarjeta.astro';
+import { OBRA } from '../../consts';
+import { getEntradasPublicadas } from '../../lib/entradas';
+import { ruta } from '../../lib/rutas';
+
+/**
+ * Una pagina por volumen, con TODAS las entradas que hablan de el: la resena,
+ * el analisis de un personaje que aparece ahi, la comparativa con el anime...
+ * Solo se generan los volumenes que ya tienen algo escrito.
+ */
+export async function getStaticPaths() {
+  const entradas = await getEntradasPublicadas();
+
+  const porVolumen = new Map<number, typeof entradas>();
+  for (const entrada of entradas) {
+    const { volumen } = entrada.data;
+    if (!volumen) continue;
+    const grupo = porVolumen.get(volumen);
+    if (grupo) grupo.push(entrada);
+    else porVolumen.set(volumen, [entrada]);
+  }
+
+  return [...porVolumen.entries()].map(([numero, lista]) => ({
+    params: { numero: String(numero) },
+    props: { numero, entradas: lista },
+  }));
+}
+
+interface Props {
+  numero: number;
+  entradas: Awaited<ReturnType<typeof getEntradasPublicadas>>;
+}
+
+const { numero, entradas } = Astro.props;
+
+// Si alguna entrada declara el arco, lo usamos como subtitulo.
+const arco = entradas.find((e) => e.data.arco)?.data.arco;
+---
+
+<Base
+  titulo={`Volumen ${numero}`}
+  descripcion={`Todas las entradas sobre el volumen ${numero} de ${OBRA.titulo}.`}
+>
+  <p style="margin-top:0">
+    <a href={ruta('volumenes')}>← Todos los volúmenes</a>
+  </p>
+
+  <h2 style="margin-top:1.5rem">Volumen {numero} de {OBRA.volumenes}</h2>
+
+  {
+    arco && (
+      <p style="color:var(--texto-suave);font-family:var(--sans);font-size:0.85rem;margin-top:-0.5rem">
+        Arco: <strong>{arco}</strong>
+      </p>
+    )
+  }
+
+  <p style="color:var(--texto-suave)">
+    {entradas.length} {entradas.length === 1 ? 'entrada' : 'entradas'} sobre este volumen.
+  </p>
+
+  <ul class="lista" style="margin-top:2.5rem">
+    {entradas.map((entrada) => <Tarjeta entrada={entrada} />)}
+  </ul>
+</Base>

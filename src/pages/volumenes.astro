@@ -6,22 +6,23 @@ import { ruta } from '../lib/rutas';
 
 const entradas = await getEntradasPublicadas();
 
-// Cruza los volúmenes 1..23 con las reseñas que ya están publicadas.
-const resenaPorVolumen = new Map<number, (typeof entradas)[number]>();
+// Cuenta cuántas entradas hay por volumen. Puede haber varias: la reseña, un
+// análisis de personaje, la comparativa con el anime...
+const conteoPorVolumen = new Map<number, number>();
 for (const entrada of entradas) {
   const { volumen } = entrada.data;
-  if (volumen && !resenaPorVolumen.has(volumen)) {
-    resenaPorVolumen.set(volumen, entrada);
-  }
+  if (!volumen) continue;
+  conteoPorVolumen.set(volumen, (conteoPorVolumen.get(volumen) ?? 0) + 1);
 }
 
 const volumenes = Array.from({ length: OBRA.volumenes }, (_, i) => {
   const numero = i + 1;
-  return { numero, resena: resenaPorVolumen.get(numero) };
+  return { numero, cuantas: conteoPorVolumen.get(numero) ?? 0 };
 });
 
-const hechos = resenaPorVolumen.size;
+const hechos = conteoPorVolumen.size;
 const porcentaje = Math.round((hechos / OBRA.volumenes) * 100);
+const totalEntradas = [...conteoPorVolumen.values()].reduce((a, b) => a + b, 0);
 ---
 
 <Base
@@ -46,21 +47,21 @@ const porcentaje = Math.round((hechos / OBRA.volumenes) * 100);
 
   <ul class="volumenes">
     {
-      volumenes.map(({ numero, resena }) =>
-        resena ? (
+      volumenes.map(({ numero, cuantas }) =>
+        cuantas > 0 ? (
           <li>
             <a
               class="volumen volumen--hecho"
-              href={ruta(`entradas/${resena.id}`)}
-              title={resena.data.titulo}
+              href={ruta(`volumenes/${numero}`)}
+              title={`Volumen ${numero}: ${cuantas} ${cuantas === 1 ? 'entrada' : 'entradas'}`}
             >
               <b>{numero}</b>
-              <span>Reseñado</span>
+              <span>{cuantas === 1 ? '1 entrada' : `${cuantas} entradas`}</span>
             </a>
           </li>
         ) : (
           <li>
-            <div class="volumen" title={`Volumen ${numero}: todavía sin reseña`}>
+            <div class="volumen" title={`Volumen ${numero}: todavía sin nada escrito`}>
               <b>{numero}</b>
               <span>Pendiente</span>
             </div>
@@ -71,7 +72,10 @@ const porcentaje = Math.round((hechos / OBRA.volumenes) * 100);
   </ul>
 
   <p style="color:var(--texto-suave);font-size:0.9rem">
-    Para que un volumen se marque aquí, la entrada tiene que llevar
-    <code>volumen: {'{número}'}</code> en su encabezado.
+    Puedes escribir <strong>varias entradas por volumen</strong> — la reseña, un
+    análisis de personaje, la comparativa con el anime. Todas las que lleven
+    <code>volumen: {'{número}'}</code> en su encabezado aparecen juntas en la
+    página de ese volumen.
+    {totalEntradas > 0 && ` Ahora mismo hay ${totalEntradas} en total.`}
   </p>
 </Base>
