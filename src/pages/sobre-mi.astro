@@ -1,0 +1,67 @@
+---
+import Base from '../layouts/Base.astro';
+import { AUTOR, OBRA } from '../consts';
+---
+
+<Base titulo="Sobre mí" descripcion="Quién escribe este blog y por qué solo habla de Tensura.">
+  <article class="prosa">
+    <h2 style="margin-top:0">Sobre mí</h2>
+
+    <!--
+      ESCRIBE ESTO TÚ. Es lo primero que va a leer cualquiera que llegue aquí,
+      y lo único que no puede salir de una plantilla. Tres párrafos bastan:
+        - Quién eres.
+        - Cómo llegaste a Tensura y cuánto tiempo te llevó terminarla.
+        - Por qué un blog de UNA sola obra en vez de uno general.
+      Borra los comentarios y los [corchetes] cuando lo tengas.
+    -->
+
+    <p>
+      Me llamo {AUTOR} y acabo de terminarme los {OBRA.volumenes} volúmenes de
+      <em>{OBRA.titulo}</em>.
+    </p>
+
+    <p>
+      <em>
+        [Cuenta aquí cómo entraste: ¿por el anime y luego saltaste a la novela?
+        ¿cuánto tardaste en leerla? ¿qué volumen te hizo decir "esto es otra
+        cosa"? Esto es lo que hace que el blog suene a alguien y no a una ficha
+        de Wikipedia.]
+      </em>
+    </p>
+
+    <p>
+      <em>
+        [Y aquí: por qué solo Tensura. Qué crees que se puede decir de esta obra
+        que no se haya dicho ya, y qué te interesa mirar de cerca — el sistema de
+        habilidades, la política de Tempest, la diferencia entre la novela web y
+        la publicada, la adaptación al anime...]
+      </em>
+    </p>
+
+    <h3>Qué vas a encontrar aquí</h3>
+
+    <ul>
+      <li><strong>Reseñas por volumen</strong> — los {OBRA.volumenes}, uno a uno.</li>
+      <li><strong>Novela contra anime</strong> — qué se cortó, qué se cambió y si funcionó.</li>
+      <li><strong>Fichas de personajes</strong> — los que me importan y por qué.</li>
+      <li><strong>Boletín automático</strong> — el estado de la franquicia, con datos de AniList.</li>
+    </ul>
+
+    <h3>Cómo está montado</h3>
+
+    <p>
+      Las entradas se publican solas. Escribo varias cuando tengo tiempo, cada
+      una lleva una fecha, y el sitio se reconstruye todos los días para publicar
+      la que toca. El boletín de datos se genera solo cada mes desde la API de
+      <a href="https://anilist.co" rel="noopener">AniList</a>. Las opiniones, en
+      cambio, las escribo yo — que para eso está el blog.
+    </p>
+
+    <p style="color:var(--texto-suave);font-size:0.9rem">
+      Las imágenes y vídeos que aparecen aquí pertenecen a sus autores
+      ({OBRA.autor}, {OBRA.ilustrador}, Eight Bit, Kodansha, Micro Magazine) y se
+      usan solo para comentar la obra.
+    </p>
+  </article>
+</Base>

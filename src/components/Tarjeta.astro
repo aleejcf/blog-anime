@@ -1,0 +1,28 @@
+---
+import type { Entrada } from '../lib/entradas';
+import { nombreTipo, formatearFecha } from '../lib/entradas';
+import { ruta } from '../lib/rutas';
+
+interface Props {
+  entrada: Entrada;
+}
+
+const { entrada } = Astro.props;
+const { titulo, resumen, fecha, tipo, puntuacion, volumen, spoilers } = entrada.data;
+---
+
+<li>
+  <article>
+    <div class="tarjeta__meta">
+      <span class="insignia">{nombreTipo(tipo)}</span>
+      {volumen && <span class="insignia insignia--oro">Vol. {volumen}</span>}
+      <time datetime={fecha.toISOString()}>{formatearFecha(fecha)}</time>
+      {puntuacion !== undefined && <span class="nota">{puntuacion.toFixed(1)}/10</span>}
+      {spoilers !== 'ninguno' && <span>· spoilers</span>}
+    </div>
+    <h2 class="tarjeta__titulo">
+      <a href={ruta(`entradas/${entrada.id}`)}>{titulo}</a>
+    </h2>
+    <p class="tarjeta__resumen">{resumen}</p>
+  </article>
+</li>

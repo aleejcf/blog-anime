@@ -1,0 +1,56 @@
+name: Generar boletin de la franquicia
+
+on:
+  # El dia 1 de cada mes a las 12:30 UTC, media hora antes del despliegue diario.
+  # Mensual y no semanal porque los datos de AniList (notas, capitulos nuevos,
+  # anuncios) no cambian tanto en siete dias.
+  schedule:
+    - cron: '30 12 1 * *'
+
+  workflow_dispatch:
+
+jobs:
+  generar:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      hay_cambios: ${{ steps.commit.outputs.hay_cambios }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Consultar AniList y generar el boletin
+        # Si AniList esta caido no queremos que falle todo: el blog sigue
+        # publicando la cola normalmente.
+        continue-on-error: true
+        run: node scripts/generar-post-automatico.mjs
+
+      - name: Guardar el boletin en el repo
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/content/entradas
+          if git diff --staged --quiet; then
+            echo "Sin cambios: no hay boletin nuevo."
+            echo "hay_cambios=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "Boletin mensual automatico de la franquicia"
+            git push
+            echo "hay_cambios=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Los commits hechos con GITHUB_TOKEN no disparan otros workflows, asi que
+  # llamamos al despliegue explicitamente.
+  desplegar:
+    needs: generar
+    if: needs.generar.outputs.hay_cambios == 'true'
+    uses: ./.github/workflows/deploy.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write

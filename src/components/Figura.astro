@@ -1,0 +1,20 @@
+---
+/**
+ * Imagen con pie de foto.
+ *
+ *   <Figura src="https://..." alt="Rimuru en forma de slime" pie="Ilustración de Mitz Vah, vol. 1" />
+ */
+interface Props {
+  src: string;
+  /** Descripción para quien no puede ver la imagen. Obligatoria. */
+  alt: string;
+  pie?: string;
+}
+
+const { src, alt, pie } = Astro.props;
+---
+
+<figure class="figura">
+  <img src={src} alt={alt} loading="lazy" decoding="async" />
+  {pie && <figcaption class="pie-medio">{pie}</figcaption>}
+</figure>

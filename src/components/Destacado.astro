@@ -1,0 +1,20 @@
+---
+/**
+ * Caja para apartar algo del texto principal: un dato, una advertencia,
+ * una nota sobre la traducción...
+ *
+ *   <Destacado titulo="Nota sobre la traducción">
+ *     La edición de J-Novel Club traduce "Gran Sabio" como...
+ *   </Destacado>
+ */
+interface Props {
+  titulo?: string;
+}
+
+const { titulo } = Astro.props;
+---
+
+<aside class="destacado">
+  {titulo && <p class="destacado__titulo">{titulo}</p>}
+  <slot />
+</aside>

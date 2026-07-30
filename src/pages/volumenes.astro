@@ -1,0 +1,77 @@
+---
+import Base from '../layouts/Base.astro';
+import { OBRA } from '../consts';
+import { getEntradasPublicadas } from '../lib/entradas';
+import { ruta } from '../lib/rutas';
+
+const entradas = await getEntradasPublicadas();
+
+// Cruza los volúmenes 1..23 con las reseñas que ya están publicadas.
+const resenaPorVolumen = new Map<number, (typeof entradas)[number]>();
+for (const entrada of entradas) {
+  const { volumen } = entrada.data;
+  if (volumen && !resenaPorVolumen.has(volumen)) {
+    resenaPorVolumen.set(volumen, entrada);
+  }
+}
+
+const volumenes = Array.from({ length: OBRA.volumenes }, (_, i) => {
+  const numero = i + 1;
+  return { numero, resena: resenaPorVolumen.get(numero) };
+});
+
+const hechos = resenaPorVolumen.size;
+const porcentaje = Math.round((hechos / OBRA.volumenes) * 100);
+---
+
+<Base
+  titulo="Volúmenes"
+  descripcion={`Progreso de las reseñas de los ${OBRA.volumenes} volúmenes de ${OBRA.titulo}.`}
+>
+  <h2 style="margin-top:0">Los {OBRA.volumenes} volúmenes</h2>
+
+  <p style="color:var(--texto-suave)">
+    La novela de <strong>{OBRA.autor}</strong> cerró en {OBRA.anios.split(' - ')[1]} con
+    {OBRA.volumenes} volúmenes y {OBRA.capitulos} capítulos. Voy reseñándolos uno
+    a uno: <strong>{hechos} de {OBRA.volumenes}</strong> ({porcentaje}%).
+  </p>
+
+  <div
+    class="barra-progreso"
+    role="img"
+    aria-label={`${hechos} de ${OBRA.volumenes} volúmenes reseñados`}
+  >
+    <div style={`width:${porcentaje}%`}></div>
+  </div>
+
+  <ul class="volumenes">
+    {
+      volumenes.map(({ numero, resena }) =>
+        resena ? (
+          <li>
+            <a
+              class="volumen volumen--hecho"
+              href={ruta(`entradas/${resena.id}`)}
+              title={resena.data.titulo}
+            >
+              <b>{numero}</b>
+              <span>Reseñado</span>
+            </a>
+          </li>
+        ) : (
+          <li>
+            <div class="volumen" title={`Volumen ${numero}: todavía sin reseña`}>
+              <b>{numero}</b>
+              <span>Pendiente</span>
+            </div>
+          </li>
+        )
+      )
+    }
+  </ul>
+
+  <p style="color:var(--texto-suave);font-size:0.9rem">
+    Para que un volumen se marque aquí, la entrada tiene que llevar
+    <code>volumen: {'{número}'}</code> en su encabezado.
+  </p>
+</Base>

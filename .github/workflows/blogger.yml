@@ -1,0 +1,72 @@
+name: Publicar en Blogger
+
+on:
+  # Cada vez que subes entradas nuevas.
+  push:
+    branches: [main]
+    paths:
+      - 'src/content/entradas/**'
+
+  workflow_dispatch:
+
+# Un solo envio a la vez, para no duplicar entradas si se solapan dos runs.
+concurrency:
+  group: blogger
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Si todavia no has configurado Blogger, este workflow no hace nada y
+      # termina en verde. Asi no te llena el correo de fallos mientras montas
+      # el resto del blog.
+      - name: Comprobar si Blogger esta configurado
+        id: revisar
+        env:
+          BLOG_ID: ${{ secrets.BLOGGER_BLOG_ID }}
+        run: |
+          if [ -z "$BLOG_ID" ]; then
+            echo "Blogger no esta configurado todavia: no hay nada que hacer."
+            echo "listo=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "listo=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.revisar.outputs.listo == 'true'
+        run: npm ci
+
+      - name: Exportar las entradas ya renderizadas
+        if: steps.revisar.outputs.listo == 'true'
+        run: npm run exportar
+
+      - name: Subir a Blogger
+        if: steps.revisar.outputs.listo == 'true'
+        env:
+          BLOGGER_BLOG_ID: ${{ secrets.BLOGGER_BLOG_ID }}
+          BLOGGER_CLIENT_ID: ${{ secrets.BLOGGER_CLIENT_ID }}
+          BLOGGER_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
+          BLOGGER_REFRESH_TOKEN: ${{ secrets.BLOGGER_REFRESH_TOKEN }}
+        run: npm run blogger
+
+      - name: Guardar el registro de lo publicado
+        if: steps.revisar.outputs.listo == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add blogger-publicados.json
+          if git diff --staged --quiet; then
+            echo "Sin cambios en el registro."
+          else
+            git commit -m "Registro de entradas publicadas en Blogger"
+            git push
+          fi

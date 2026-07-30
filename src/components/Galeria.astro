@@ -1,0 +1,35 @@
+---
+/**
+ * Rejilla de imágenes. Se adapta sola al ancho disponible.
+ *
+ *   <Galeria
+ *     pie="Portadas de los arcos finales"
+ *     imagenes={[
+ *       { src: 'https://...', alt: 'Portada del volumen 20' },
+ *       { src: 'https://...', alt: 'Portada del volumen 21' },
+ *     ]}
+ *   />
+ */
+interface Imagen {
+  src: string;
+  alt: string;
+}
+
+interface Props {
+  imagenes: Imagen[];
+  pie?: string;
+}
+
+const { imagenes, pie } = Astro.props;
+---
+
+<figure class="galeria">
+  <div class="galeria__rejilla">
+    {
+      imagenes.map(({ src, alt }) => (
+        <img src={src} alt={alt} loading="lazy" decoding="async" />
+      ))
+    }
+  </div>
+  {pie && <figcaption class="pie-medio">{pie}</figcaption>}
+</figure>

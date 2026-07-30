@@ -1,0 +1,50 @@
+---
+import Base from '../layouts/Base.astro';
+import Tarjeta from '../components/Tarjeta.astro';
+import { getEntradasPublicadas, nombreTipo } from '../lib/entradas';
+
+const entradas = await getEntradasPublicadas();
+
+// Agrupadas por año, del más reciente al más antiguo.
+const porAnio = new Map<number, typeof entradas>();
+for (const entrada of entradas) {
+  const anio = entrada.data.fecha.getUTCFullYear();
+  const grupo = porAnio.get(anio);
+  if (grupo) grupo.push(entrada);
+  else porAnio.set(anio, [entrada]);
+}
+const anios = [...porAnio.keys()].sort((a, b) => b - a);
+
+const conteos = entradas.reduce<Record<string, number>>((acc, entrada) => {
+  const nombre = nombreTipo(entrada.data.tipo);
+  acc[nombre] = (acc[nombre] ?? 0) + 1;
+  return acc;
+}, {});
+---
+
+<Base titulo="Archivo" descripcion="Todas las entradas del blog, agrupadas por año.">
+  <h2 style="margin-top:0">Archivo</h2>
+
+  <p style="color:var(--texto-suave)">
+    {entradas.length} {entradas.length === 1 ? 'entrada' : 'entradas'}
+    {
+      Object.keys(conteos).length > 0 &&
+        ` · ${Object.entries(conteos)
+          .map(([nombre, n]) => `${n} de ${nombre.toLowerCase()}`)
+          .join(', ')}`
+    }
+  </p>
+
+  {
+    anios.map((anio) => (
+      <section style="margin-top:3rem">
+        <h3 style="color:var(--texto-suave);font-family:var(--sans);font-size:0.8125rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:1.5rem">
+          {anio}
+        </h3>
+        <ul class="lista">
+          {porAnio.get(anio)!.map((entrada) => <Tarjeta entrada={entrada} />)}
+        </ul>
+      </section>
+    ))
+  }
+</Base>

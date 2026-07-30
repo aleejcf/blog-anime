@@ -1,0 +1,104 @@
+---
+import '../styles/global.css';
+import { SITE_TITLE, SITE_SUBTITLE, SITE_DESCRIPTION, AUTOR, IDIOMA, ZONA } from '../consts';
+import { ruta } from '../lib/rutas';
+
+interface Props {
+  titulo?: string;
+  descripcion?: string;
+  tipoOg?: 'website' | 'article';
+  imagen?: string;
+}
+
+const {
+  titulo,
+  descripcion = SITE_DESCRIPTION,
+  tipoOg = 'website',
+  imagen,
+} = Astro.props;
+
+const tituloCompleto = titulo ? `${titulo} — ${SITE_TITLE}` : `${SITE_TITLE} — ${SITE_SUBTITLE}`;
+const urlCanonica = new URL(Astro.url.pathname, Astro.site);
+const anio = new Date().getUTCFullYear();
+
+const enlaces = [
+  { texto: 'Inicio', href: ruta() },
+  { texto: 'Volúmenes', href: ruta('volumenes') },
+  { texto: 'Archivo', href: ruta('archivo') },
+  { texto: 'Sobre mí', href: ruta('sobre-mi') },
+  { texto: 'RSS', href: ruta('rss.xml') },
+];
+
+const rutaActual = Astro.url.pathname.replace(/\/$/, '');
+
+// Momento de la construccion. Como GitHub Actions reconstruye el sitio cada
+// dia, esto queda como prueba visible de que la automatizacion sigue viva.
+const ahora = new Date();
+const reconstruido = new Intl.DateTimeFormat('es-ES', {
+  timeZone: ZONA,
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+}).format(ahora);
+---
+
+<!doctype html>
+<html lang={IDIOMA}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{tituloCompleto}</title>
+    <meta name="description" content={descripcion} />
+    <meta name="author" content={AUTOR} />
+    <link rel="canonical" href={urlCanonica} />
+    <link rel="alternate" type="application/rss+xml" title={SITE_TITLE} href={ruta('rss.xml')} />
+    <meta property="og:type" content={tipoOg} />
+    <meta property="og:title" content={titulo ?? SITE_TITLE} />
+    <meta property="og:description" content={descripcion} />
+    <meta property="og:url" content={urlCanonica} />
+    {imagen && <meta property="og:image" content={imagen} />}
+    <meta name="twitter:card" content={imagen ? 'summary_large_image' : 'summary'} />
+  </head>
+
+  <body>
+    <header class="cabecera">
+      <div class="envoltura">
+        <a class="cabecera__marca" href={ruta()}>
+          <h1 class="cabecera__titulo">{SITE_TITLE}</h1>
+          <p class="cabecera__subtitulo">{SITE_SUBTITLE}</p>
+        </a>
+        <nav class="nav" aria-label="Navegación principal">
+          {
+            enlaces.map(({ texto, href }) => (
+              <a
+                href={href}
+                aria-current={href.replace(/\/$/, '') === rutaActual ? 'page' : undefined}
+              >
+                {texto}
+              </a>
+            ))
+          }
+        </nav>
+      </div>
+    </header>
+
+    <main class="envoltura">
+      <slot />
+    </main>
+
+    <footer class="pie">
+      <div class="envoltura">
+        <div class="pie__fila">
+          <span>© {anio} {AUTOR}</span>
+          <span>Hecho con Astro · publicación automática</span>
+        </div>
+        <p style="margin:0.9rem 0 0;font-size:0.75rem;opacity:0.75">
+          Última reconstrucción: <time datetime={ahora.toISOString()}>{reconstruido}</time>
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

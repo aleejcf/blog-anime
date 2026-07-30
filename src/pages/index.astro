@@ -1,0 +1,72 @@
+---
+import Base from '../layouts/Base.astro';
+import Tarjeta from '../components/Tarjeta.astro';
+import { OBRA } from '../consts';
+import { getEntradasPublicadas } from '../lib/entradas';
+import { ruta } from '../lib/rutas';
+
+const entradas = await getEntradasPublicadas();
+const recientes = entradas.slice(0, 12);
+
+const volumenesResenados = new Set(
+  entradas.map((e) => e.data.volumen).filter((v): v is number => Boolean(v))
+).size;
+---
+
+<Base>
+  <section class="hero">
+    <h2>{OBRA.tituloEs}</h2>
+    <p>
+      Terminé los {OBRA.volumenes} volúmenes de <em>{OBRA.titulo}</em>, la novela de
+      <strong>{OBRA.autor}</strong> ilustrada por <strong>{OBRA.ilustrador}</strong>.
+      Este blog es lo que me quedó por decir: reseña por volumen, comparativas con
+      el anime y el manga, y análisis de personajes.
+    </p>
+    <div class="hero__datos">
+      <div class="hero__dato">
+        <b>{OBRA.volumenes}</b>
+        <span>Volúmenes</span>
+      </div>
+      <div class="hero__dato">
+        <b>{OBRA.capitulos}</b>
+        <span>Capítulos</span>
+      </div>
+      <div class="hero__dato">
+        <b>{OBRA.anios.split(' - ')[0]}–{OBRA.anios.split(' - ')[1]}</b>
+        <span>Publicación</span>
+      </div>
+      <div class="hero__dato">
+        <b>{volumenesResenados}/{OBRA.volumenes}</b>
+        <span>Reseñados</span>
+      </div>
+    </div>
+  </section>
+
+  {
+    recientes.length === 0 ? (
+      <div class="vacio">
+        <p>
+          Todavía no hay entradas publicadas. Crea la primera con
+          <code>npm run nueva</code>.
+        </p>
+      </div>
+    ) : (
+      <>
+        <p class="rotulo">Últimas entradas</p>
+        <ul class="lista">
+          {recientes.map((entrada) => (
+            <Tarjeta entrada={entrada} />
+          ))}
+        </ul>
+      </>
+    )
+  }
+
+  {
+    entradas.length > recientes.length && (
+      <p style="margin-top:3rem">
+        <a href={ruta('archivo')}>Ver todas las entradas ({entradas.length}) →</a>
+      </p>
+    )
+  }
+</Base>

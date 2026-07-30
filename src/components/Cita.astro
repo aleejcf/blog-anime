@@ -1,0 +1,20 @@
+---
+/**
+ * Cita destacada, centrada y grande.
+ *
+ *   <Cita autor="Rimuru, vol. 14">Frase corta.</Cita>
+ *
+ * Ojo: cita frases breves y di siempre de dónde salen. No pegues párrafos
+ * enteros de la novela — ni queda bien ni es legal.
+ */
+interface Props {
+  autor?: string;
+}
+
+const { autor } = Astro.props;
+---
+
+<figure class="cita">
+  <blockquote class="cita__texto"><slot /></blockquote>
+  {autor && <figcaption class="cita__autor">{autor}</figcaption>}
+</figure>

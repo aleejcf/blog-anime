@@ -1,0 +1,20 @@
+---
+/**
+ * Bloque que oculta spoilers hasta que el lector hace clic.
+ * Usa <details>, así que funciona sin JavaScript.
+ *
+ *   <Spoiler aviso="Spoiler del volumen 14">
+ *     Aquí lo que no quieres que lea quien va por el 5.
+ *   </Spoiler>
+ */
+interface Props {
+  aviso?: string;
+}
+
+const { aviso = 'Spoiler — clic para mostrar' } = Astro.props;
+---
+
+<details class="spoiler">
+  <summary>{aviso}</summary>
+  <div class="spoiler__cuerpo"><slot /></div>
+</details>

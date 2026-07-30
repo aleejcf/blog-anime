@@ -1,0 +1,60 @@
+---
+/**
+ * Vídeo de YouTube, responsivo y sin cookies de seguimiento.
+ *
+ *   <Video url="https://www.youtube.com/watch?v=xxxxxxxxxxx" pie="Opening 1" />
+ *   <Video id="xxxxxxxxxxx" />
+ */
+interface Props {
+  /** ID de 11 caracteres, o usa `url` y lo extraigo yo. */
+  id?: string;
+  /** Cualquier formato de enlace de YouTube. */
+  url?: string;
+  /** Texto debajo del vídeo. */
+  pie?: string;
+  /** Para lectores de pantalla. Si no lo pones, uso el pie. */
+  titulo?: string;
+}
+
+const { id, url, pie, titulo } = Astro.props;
+
+function extraerId(entrada?: string): string | undefined {
+  if (!entrada) return undefined;
+  // Ya es un ID pelado.
+  if (/^[\w-]{11}$/.test(entrada)) return entrada;
+  const patrones = [
+    /[?&]v=([\w-]{11})/, // watch?v=
+    /youtu\.be\/([\w-]{11})/, // youtu.be/
+    /\/embed\/([\w-]{11})/, // /embed/
+    /\/shorts\/([\w-]{11})/, // /shorts/
+  ];
+  for (const patron of patrones) {
+    const encontrado = entrada.match(patron);
+    if (encontrado) return encontrado[1];
+  }
+  return undefined;
+}
+
+const idVideo = extraerId(id) ?? extraerId(url);
+
+if (!idVideo) {
+  throw new Error(
+    `<Video>: no pude sacar el ID de YouTube de "${id ?? url ?? '(nada)'}". ` +
+      'Pasa la URL completa del vídeo o el ID de 11 caracteres.'
+  );
+}
+
+const etiqueta = titulo ?? pie ?? 'Vídeo de YouTube';
+---
+
+<figure class="video">
+  <div class="video__marco">
+    <iframe
+      src={`https://www.youtube-nocookie.com/embed/${idVideo}?rel=0`}
+      title={etiqueta}
+      loading="lazy"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+      allowfullscreen></iframe>
+  </div>
+  {pie && <figcaption class="pie-medio">{pie}</figcaption>}
+</figure>

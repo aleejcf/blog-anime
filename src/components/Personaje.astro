@@ -1,0 +1,25 @@
+---
+/**
+ * Ficha corta de personaje. El texto va dentro de la etiqueta.
+ *
+ *   <Personaje nombre="Rimuru Tempest" rol="Protagonista · Rey Demonio">
+ *     Lo que más me gusta de él es que...
+ *   </Personaje>
+ */
+interface Props {
+  nombre: string;
+  rol?: string;
+  foto?: string;
+}
+
+const { nombre, rol, foto } = Astro.props;
+---
+
+<aside class="personaje">
+  {foto && <img class="personaje__foto" src={foto} alt={nombre} loading="lazy" />}
+  <div>
+    <h4 class="personaje__nombre">{nombre}</h4>
+    {rol && <p class="personaje__rol">{rol}</p>}
+    <div class="personaje__texto"><slot /></div>
+  </div>
+</aside>

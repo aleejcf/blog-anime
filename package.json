@@ -1,0 +1,23 @@
+{
+  "name": "blog-anime",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "nueva": "node scripts/nueva-resena.mjs",
+    "auto": "node scripts/generar-post-automatico.mjs",
+    "cola": "node scripts/ver-cola.mjs",
+    "exportar": "node scripts/exportar.mjs",
+    "blogger": "node scripts/publicar-en-blogger.mjs",
+    "token-blogger": "node scripts/obtener-token-blogger.mjs"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^4.3.14",
+    "@astrojs/rss": "^4.0.0",
+    "@astrojs/sitemap": "^3.2.0",
+    "astro": "^5.0.0"
+  }
+}

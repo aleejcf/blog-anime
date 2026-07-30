@@ -1,0 +1,87 @@
+---
+import { render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import {
+  getEntradasPublicadas,
+  nombreTipo,
+  formatearFecha,
+  avisoSpoiler,
+} from '../../lib/entradas';
+import { ruta } from '../../lib/rutas';
+
+export async function getStaticPaths() {
+  const entradas = await getEntradasPublicadas();
+  return entradas.map((entrada) => ({
+    params: { id: entrada.id },
+    props: { entrada },
+  }));
+}
+
+const { entrada } = Astro.props;
+const { Content } = await render(entrada);
+const { titulo, resumen, fecha, tipo, etiquetas, puntuacion, portada, volumen, arco, spoilers } =
+  entrada.data;
+
+const aviso = avisoSpoiler(spoilers);
+---
+
+<Base titulo={titulo} descripcion={resumen} tipoOg="article" imagen={portada}>
+  <article>
+    <header class="entrada__cabecera">
+      <div class="tarjeta__meta">
+        <span class="insignia">{nombreTipo(tipo)}</span>
+        {volumen && <span class="insignia insignia--oro">Vol. {volumen}</span>}
+        <time datetime={fecha.toISOString()}>{formatearFecha(fecha)}</time>
+        {puntuacion !== undefined && <span class="nota">{puntuacion.toFixed(1)}/10</span>}
+      </div>
+      <h1 class="entrada__titulo">{titulo}</h1>
+      <p class="entrada__resumen">{resumen}</p>
+      {
+        arco && (
+          <p
+            style="margin:0.9rem 0 0;font-family:var(--sans);font-size:0.8rem;color:var(--texto-suave)"
+          >
+            Arco: <strong>{arco}</strong>
+          </p>
+        )
+      }
+    </header>
+
+    {
+      aviso && (
+        <p class="aviso-spoiler">
+          <strong>Aviso:</strong> {aviso}
+        </p>
+      )
+    }
+
+    {
+      portada && (
+        <img
+          class="entrada__portada"
+          src={portada}
+          alt={`Portada de ${titulo}`}
+          loading="lazy"
+        />
+      )
+    }
+
+    <div class="prosa">
+      <Content />
+    </div>
+
+    {
+      etiquetas.length > 0 && (
+        <ul class="etiquetas">
+          {etiquetas.map((etiqueta) => (
+            <li>#{etiqueta}</li>
+          ))}
+        </ul>
+      )
+    }
+  </article>
+
+  <p style="margin-top:3rem">
+    <a href={ruta()}>← Volver al inicio</a>
+  </p>
+</Base>

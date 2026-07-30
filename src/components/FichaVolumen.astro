@@ -1,0 +1,55 @@
+---
+/**
+ * Ficha de un volumen de la novela ligera.
+ *
+ *   <FichaVolumen numero={1} arco="El nacimiento de Tempest" paginas={250} nota={8.5}
+ *     portada="https://..." />
+ */
+import { OBRA } from '../consts';
+
+interface Props {
+  numero: number;
+  titulo?: string;
+  arco?: string;
+  paginas?: number;
+  nota?: number;
+  portada?: string;
+  /** Fecha de publicación en español, ej: "mayo de 2014". */
+  publicado?: string;
+}
+
+const { numero, titulo, arco, paginas, nota, portada, publicado } = Astro.props;
+
+const filas = [
+  ['Arco', arco],
+  ['Páginas', paginas ? `${paginas}` : undefined],
+  ['Publicado', publicado],
+  ['Autor', OBRA.autor],
+  ['Ilustración', OBRA.ilustrador],
+  ['Mi nota', nota !== undefined ? `${nota.toFixed(1)} / 10` : undefined],
+].filter((fila): fila is [string, string] => Boolean(fila[1]));
+---
+
+<aside class="ficha">
+  {
+    portada && (
+      <div class="ficha__portada">
+        <img src={portada} alt={`Portada del volumen ${numero}`} loading="lazy" />
+      </div>
+    )
+  }
+  <div class="ficha__cuerpo">
+    <p class="ficha__num">Volumen {numero} de {OBRA.volumenes}</p>
+    <h3 class="ficha__titulo">{titulo ?? `${OBRA.tituloEs}, vol. ${numero}`}</h3>
+    <dl class="ficha__datos">
+      {
+        filas.map(([clave, valor]) => (
+          <>
+            <dt>{clave}</dt>
+            <dd>{valor}</dd>
+          </>
+        ))
+      }
+    </dl>
+  </div>
+</aside>
