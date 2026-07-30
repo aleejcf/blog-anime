@@ -5,11 +5,19 @@ on:
   push:
     branches: [main]
 
-  # El corazon de la automatizacion: reconstruye el sitio todos los dias a las
-  # 13:00 UTC. Cualquier entrada de la cola cuya fecha ya llego aparece sola.
-  # (07:00 en CDMX, 08:00 en Bogota/Lima, 10:00 en Buenos Aires, 15:00 en Madrid)
+  # El corazon de la automatizacion: reconstruye el sitio cada 3 horas.
+  # Cualquier entrada cuya fecha (y hora) ya paso aparece en la siguiente
+  # reconstruccion, asi que puedes programar entradas a distintas horas del dia.
+  #
+  # 8 ventanas al día, en UTC: 00 03 06 09 12 15 18 21
+  # En Honduras (UTC-6):       18 21 00 03 06 09 12 15
+  #
+  # Los repos publicos tienen minutos de Actions ilimitados, asi que esto no
+  # cuesta nada. OJO: el cron de GitHub NO es puntual — puede retrasarse entre
+  # 5 y 20 minutos (a veces mas si hay mucha carga). La hora que pongas es un
+  # "no antes de", no un reloj suizo.
   schedule:
-    - cron: '0 13 * * *'
+    - cron: '0 */3 * * *'
 
   # Para poder lanzarlo a mano desde la pestana Actions.
   workflow_dispatch:

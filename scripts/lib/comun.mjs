@@ -1,9 +1,55 @@
+import { readFileSync } from 'node:fs';
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const RAIZ = path.resolve(fileURLToPath(import.meta.url), '../../..');
 export const DIR_ENTRADAS = path.join(RAIZ, 'src', 'content', 'entradas');
+
+/**
+ * Lee la zona horaria de src/consts.ts para no tenerla escrita en dos sitios.
+ * Es un archivo TypeScript y esto es un .mjs, asi que se saca con una busqueda
+ * de texto en vez de importarlo. Si algo falla, se cae a UTC.
+ */
+export function leerZona() {
+  try {
+    const texto = readFileSync(path.join(RAIZ, 'src', 'consts.ts'), 'utf8');
+    return texto.match(/ZONA\s*=\s*validarZona\(\s*['"]([^'"]+)['"]/)?.[1] ?? 'UTC';
+  } catch {
+    return 'UTC';
+  }
+}
+
+/**
+ * Desfase de una zona en una fecha dada, en formato "-06:00".
+ * Se calcula (no se escribe a mano) para que el horario de verano, donde
+ * aplique, no descuadre las fechas.
+ */
+export function offsetDeZona(fecha, zona) {
+  const partes = new Intl.DateTimeFormat('en-US', {
+    timeZone: zona,
+    timeZoneName: 'longOffset',
+  }).formatToParts(fecha);
+
+  const nombre = partes.find((p) => p.type === 'timeZoneName')?.value ?? '';
+  // Viene como "GMT-06:00", o solo "GMT" cuando el desfase es cero.
+  return nombre.match(/GMT([+-]\d{2}:\d{2})/)?.[1] ?? '+00:00';
+}
+
+/**
+ * Junta un dia (medianoche UTC) con una hora local y devuelve un ISO completo
+ * con el desfase explicito, por ejemplo "2026-08-03T14:30:00-06:00".
+ * Guardar el desfase en el archivo lo hace legible y sin ambiguedad.
+ */
+export function componerFechaISO(dia, hora, zona) {
+  if (!hora) return aISO(dia);
+
+  const [h, m] = hora.split(':');
+  const hh = String(Number(h)).padStart(2, '0');
+  const mm = String(Number(m ?? 0)).padStart(2, '0');
+
+  return `${aISO(dia)}T${hh}:${mm}:00${offsetDeZona(dia, zona)}`;
+}
 
 // Marcas diacriticas combinantes. Se construye desde una cadena para que el
 // archivo quede en ASCII puro y ningun editor lo rompa al guardar.
@@ -56,13 +102,27 @@ export async function leerEntradas() {
     const ruta = path.join(DIR_ENTRADAS, archivo);
     const texto = await readFile(ruta, 'utf8');
 
-    const fecha = texto.match(/^fecha:\s*['"]?(\d{4}-\d{2}-\d{2})/m)?.[1];
+    // Acepta "2026-08-03" y tambien "2026-08-03T14:30:00-06:00".
+    const bruta = texto.match(/^fecha:\s*['"]?([0-9T:+\-]{10,25})['"]?\s*$/m)?.[1];
     const titulo = texto.match(/^titulo:\s*['"](.+?)['"]\s*$/m)?.[1];
     // Admite un comentario detras: "borrador: true # ponlo en false cuando..."
     const borrador = /^borrador:\s*true\s*(#.*)?$/m.test(texto);
 
-    if (!fecha) continue;
-    entradas.push({ archivo, ruta, fecha, titulo: titulo ?? archivo, borrador });
+    if (!bruta) continue;
+
+    const fecha = bruta.slice(0, 10);
+    const momento = new Date(bruta.length > 10 ? bruta : `${bruta}T00:00:00Z`);
+
+    entradas.push({
+      archivo,
+      ruta,
+      fecha, // solo el dia, para ordenar y comparar
+      bruta, // tal como esta en el archivo
+      momento, // Date exacto, con hora si la lleva
+      llevaHora: bruta.length > 10,
+      titulo: titulo ?? archivo,
+      borrador,
+    });
   }
 
   return entradas.sort((a, b) => a.fecha.localeCompare(b.fecha));

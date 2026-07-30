@@ -1,6 +1,6 @@
 ---
 import type { Entrada } from '../lib/entradas';
-import { nombreTipo, formatearFecha } from '../lib/entradas';
+import { nombreTipo, formatearFecha, formatearHora, llevaHora } from '../lib/entradas';
 import { ruta } from '../lib/rutas';
 
 interface Props {
@@ -16,7 +16,9 @@ const { titulo, resumen, fecha, tipo, puntuacion, volumen, spoilers } = entrada.
     <div class="tarjeta__meta">
       <span class="insignia">{nombreTipo(tipo)}</span>
       {volumen && <span class="insignia insignia--oro">Vol. {volumen}</span>}
-      <time datetime={fecha.toISOString()}>{formatearFecha(fecha)}</time>
+      <time datetime={fecha.toISOString()}>
+        {formatearFecha(fecha)}{llevaHora(fecha) && ` · ${formatearHora(fecha)}`}
+      </time>
       {puntuacion !== undefined && <span class="nota">{puntuacion.toFixed(1)}/10</span>}
       {spoilers !== 'ninguno' && <span>· spoilers</span>}
     </div>

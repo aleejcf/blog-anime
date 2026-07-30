@@ -16,10 +16,26 @@ Tres mecanismos, todos en GitHub Actions (gratis, sin servidor):
 ### 1. La cola de entradas
 
 Cada entrada lleva una `fecha`. Al construir el sitio, **las de fecha futura se
-ignoran**. Un robot reconstruye el sitio todos los días a las 13:00 UTC, así que
-cada entrada aparece sola el día que le toca.
+ignoran**. Un robot reconstruye el sitio **cada 3 horas**, así que cada entrada
+aparece sola cuando le toca.
 
 > Escribes 7 reseñas un domingo → el blog publica una por día toda la semana.
+
+La fecha puede ser solo el día o llevar hora:
+
+```yaml
+fecha: 2026-08-03                    # sale al empezar ese dia
+fecha: 2026-08-03T19:30:00-06:00     # sale a partir de las 19:30
+```
+
+Con hora, puedes repartir las publicaciones por el día en vez de que todas
+salgan de madrugada. Se genera sola con `--hora` (ver más abajo).
+
+> **La hora es un "no antes de", no un reloj.** El cron de GitHub Actions se
+> retrasa entre 5 y 20 minutos, a veces más si hay mucha carga. Y como la
+> reconstrucción es cada 3 horas, una entrada puesta a las 19:30 aparecerá en la
+> ventana de las 21:00. Si necesitas precisión al minuto, esta no es la
+> herramienta — pero para un blog no hace falta.
 
 ### 2. El espejo en Blogger
 
@@ -138,6 +154,7 @@ npm run nueva -- "Volumen 2: los enanos" --tipo novela --volumen 2 --nota 8
 | `--arco` | texto libre, entre comillas |
 | `--nota` | 0 a 10 |
 | `--spoilers` | `ninguno`, `leves`, `totales` |
+| `--hora` | `HH:MM` en tu hora local, ej. `19:30` |
 
 El script **asigna la fecha sola**: el día siguiente a la última de la cola.
 Ejecútalo cinco veces y tienes cinco días programados. Te crea un `.mdx` con la
@@ -261,9 +278,14 @@ scripts/
 
 ## Ajustes útiles
 
-**Hora de publicación diaria** — en `.github/workflows/deploy.yml`, la línea
-`cron: '0 13 * * *'`. Está en UTC: `0 13` son las 07:00 en CDMX, 08:00 en Bogotá
-y Lima, 10:00 en Buenos Aires, 15:00 en Madrid.
+**Frecuencia de reconstrucción** — en `.github/workflows/deploy.yml`, la línea
+`cron: '0 */3 * * *'` (cada 3 horas). Si quieres más precisión en los horarios,
+ponlo cada 2 horas (`0 */2 * * *`) o cada hora (`0 * * * *`). Los repos públicos
+tienen minutos de Actions ilimitados, así que no cuesta dinero — pero tampoco
+tiene sentido bajar de una hora: el cron de GitHub no es puntual.
+
+**Hora de cada entrada** — con `--hora HH:MM` al crearla, o editando el campo
+`fecha` a mano y poniéndole hora y desfase (`T19:30:00-06:00`).
 
 **Publicar cada dos días** — no toques el cron; pon las fechas de tus entradas
 cada dos días. La fecha es la que manda.

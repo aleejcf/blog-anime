@@ -1,4 +1,5 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
+import { ZONA } from '../consts';
 
 export type Entrada = CollectionEntry<'entradas'>;
 export type TipoEntrada = Entrada['data']['tipo'];
@@ -56,14 +57,35 @@ export function avisoSpoiler(nivel: Entrada['data']['spoilers']): string | null 
   return AVISOS_SPOILER[nivel];
 }
 
+/**
+ * Una fecha "solo dia" (2026-07-29) la lee Astro como medianoche UTC exacta.
+ * Si trae hora (2026-07-29T19:30:00-06:00) ya no cae en medianoche UTC.
+ * Esa es la forma de distinguirlas una vez convertidas en Date.
+ */
+export function llevaHora(fecha: Date): boolean {
+  return (
+    fecha.getUTCHours() !== 0 || fecha.getUTCMinutes() !== 0 || fecha.getUTCSeconds() !== 0
+  );
+}
+
 export function formatearFecha(fecha: Date): string {
-  // En UTC a proposito: las fechas del frontmatter son solo dia (2026-07-29),
-  // asi que Astro las lee como medianoche UTC. Formatearlas en una zona con
-  // desfase negativo mostraria el dia anterior.
+  // Las fechas de solo dia se formatean en UTC a proposito: en una zona con
+  // desfase negativo, medianoche UTC caeria en el dia anterior. Las que llevan
+  // hora si se muestran en la zona local, que es donde tienen sentido.
   return fecha.toLocaleDateString('es-ES', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-    timeZone: 'UTC',
+    timeZone: llevaHora(fecha) ? ZONA : 'UTC',
+  });
+}
+
+/** Solo la hora, para las entradas programadas a una hora concreta. */
+export function formatearHora(fecha: Date): string {
+  return fecha.toLocaleTimeString('es-ES', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: ZONA,
   });
 }

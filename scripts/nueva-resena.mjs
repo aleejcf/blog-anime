@@ -13,7 +13,14 @@
 
 import { mkdir, writeFile, access } from 'node:fs/promises';
 import path from 'node:path';
-import { DIR_ENTRADAS, slugificar, aISO, siguienteFechaLibre } from './lib/comun.mjs';
+import {
+  DIR_ENTRADAS,
+  slugificar,
+  aISO,
+  siguienteFechaLibre,
+  componerFechaISO,
+  leerZona,
+} from './lib/comun.mjs';
 
 const TIPOS = ['novela', 'anime', 'manga', 'personaje', 'analisis'];
 const NIVELES_SPOILER = ['ninguno', 'leves', 'totales'];
@@ -50,7 +57,8 @@ if (!titulo) {
   console.error('    --volumen   1 a 23 (opcional)');
   console.error('    --arco      nombre del arco, entre comillas (opcional)');
   console.error('    --nota      0 a 10 (opcional)');
-  console.error(`    --spoilers  ${NIVELES_SPOILER.join(' | ')}   (por defecto: ninguno)\n`);
+  console.error(`    --spoilers  ${NIVELES_SPOILER.join(' | ')}   (por defecto: ninguno)`);
+  console.error('    --hora      HH:MM en tu hora local, ej: 19:30 (opcional)\n');
   process.exit(1);
 }
 
@@ -80,7 +88,17 @@ if (opciones.nota !== undefined) {
 
 const arco = opciones.arco;
 
+// Hora opcional. El sitio se reconstruye cada 3 horas, asi que la entrada sale
+// en la primera ventana DESPUES de la hora que pongas (no exactamente a esa
+// hora: el cron de GitHub se retrasa unos minutos).
+const hora = opciones.hora;
+if (hora !== undefined && !/^([01]?\d|2[0-3]):[0-5]\d$/.test(hora)) {
+  morir(`Hora no valida: "${hora}". Usa el formato HH:MM de 24 horas, por ejemplo 19:30.`);
+}
+
+const zona = leerZona();
 const fecha = await siguienteFechaLibre();
+const fechaISO = componerFechaISO(fecha, hora, zona);
 const slug = slugificar(titulo);
 const destino = path.join(DIR_ENTRADAS, `${aISO(fecha)}-${slug}.mdx`);
 
@@ -96,7 +114,7 @@ try {
 const campos = [
   `titulo: "${titulo.replace(/"/g, '\\"')}"`,
   'resumen: "PENDIENTE: una frase que dé ganas de leer el resto."',
-  `fecha: ${aISO(fecha)}`,
+  `fecha: ${fechaISO}`,
   `tipo: ${tipo}`,
 ];
 
@@ -229,5 +247,13 @@ await writeFile(destino, plantilla, 'utf8');
 
 console.log(`\n  Entrada creada: ${path.relative(process.cwd(), destino)}`);
 console.log(`  Tipo: ${tipo}${volumen !== undefined ? `, volumen ${volumen}` : ''}`);
-console.log(`  Se publicara el: ${aISO(fecha)}`);
+
+if (hora) {
+  console.log(`  Se publicara el: ${aISO(fecha)} a partir de las ${hora} (${zona})`);
+  console.log('  Saldra en la primera reconstruccion despues de esa hora.');
+} else {
+  console.log(`  Se publicara el: ${aISO(fecha)} (desde el primer momento del dia)`);
+  console.log('  Usa --hora HH:MM si la quieres a una hora concreta.');
+}
+
 console.log('\n  Abrela, sustituye los PENDIENTE, y haz commit. Nada mas.\n');

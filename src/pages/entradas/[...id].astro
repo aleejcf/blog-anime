@@ -5,6 +5,8 @@ import {
   getEntradasPublicadas,
   nombreTipo,
   formatearFecha,
+  formatearHora,
+  llevaHora,
   avisoSpoiler,
 } from '../../lib/entradas';
 import { ruta } from '../../lib/rutas';
@@ -31,7 +33,9 @@ const aviso = avisoSpoiler(spoilers);
       <div class="tarjeta__meta">
         <span class="insignia">{nombreTipo(tipo)}</span>
         {volumen && <span class="insignia insignia--oro">Vol. {volumen}</span>}
-        <time datetime={fecha.toISOString()}>{formatearFecha(fecha)}</time>
+        <time datetime={fecha.toISOString()}>
+          {formatearFecha(fecha)}{llevaHora(fecha) && ` · ${formatearHora(fecha)}`}
+        </time>
         {puntuacion !== undefined && <span class="nota">{puntuacion.toFixed(1)}/10</span>}
       </div>
       <h1 class="entrada__titulo">{titulo}</h1>
