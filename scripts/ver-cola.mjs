@@ -30,18 +30,30 @@ const publicadas = entradas.filter((e) => !e.borrador && e.momento <= ahora);
 const enCola = entradas.filter((e) => !e.borrador && e.momento > ahora);
 const borradores = entradas.filter((e) => e.borrador);
 
+// Con un plan editorial de 60 entradas, listarlas todas no cabe en pantalla.
+// Se muestran las primeras y se resume el resto. `npm run cola -- --todo` las saca todas.
+const verTodo = process.argv.includes('--todo');
+const LIMITE = 12;
+
 function imprimir(titulo, lista, marca) {
   if (lista.length === 0) return;
   console.log(`\n  ${titulo} (${lista.length})`);
-  for (const e of lista) {
+
+  const mostradas = verTodo ? lista : lista.slice(0, LIMITE);
+  for (const e of mostradas) {
     const hora = e.llevaHora ? ` ${fmtHora.format(e.momento)}` : '      ';
     console.log(`    ${marca} ${e.fecha}${hora}  ${e.titulo}`);
+  }
+
+  const restantes = lista.length - mostradas.length;
+  if (restantes > 0) {
+    console.log(`    ... y ${restantes} mas (usa: npm run cola -- --todo)`);
   }
 }
 
 imprimir('PUBLICADAS', publicadas.slice().reverse(), 'o');
 imprimir('EN COLA', enCola, '.');
-imprimir('BORRADORES (no se publican)', borradores, 'x');
+imprimir('BORRADORES (pendientes de escribir)', borradores, 'x');
 
 if (enCola.length > 0) {
   const dias = enCola.length;
