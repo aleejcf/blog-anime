@@ -32,6 +32,14 @@
  */
 
 import http from 'node:http';
+import path from 'node:path';
+import { writeFile } from 'node:fs/promises';
+import { RAIZ } from './lib/comun.mjs';
+
+// El refresh token se escribe AQUI, nunca en la terminal: la salida de la
+// consola se acaba pegando en chats, capturas y tickets. Este archivo esta en
+// .gitignore, asi que no se sube al repo por accidente.
+const ARCHIVO_SECRETOS = path.join(RAIZ, '.blogger-credenciales.txt');
 
 const CLIENT_ID = process.env.BLOGGER_CLIENT_ID;
 const CLIENT_SECRET = process.env.BLOGGER_CLIENT_SECRET;
@@ -135,23 +143,62 @@ try {
   // Da igual, es un extra.
 }
 
-console.log('\n  ================================================');
-console.log('  LISTO. Guarda estos valores como Secrets del repo');
-console.log('  (Settings > Secrets and variables > Actions)');
-console.log('  ================================================\n');
-console.log(`  BLOGGER_CLIENT_ID       ${CLIENT_ID}`);
-console.log(`  BLOGGER_CLIENT_SECRET   ${CLIENT_SECRET}`);
-console.log(`  BLOGGER_REFRESH_TOKEN   ${datos.refresh_token}`);
+// ---------- se guarda en disco, no en la terminal ----------
+
+const lineas = [
+  'Credenciales de Blogger para el blog.',
+  'Pega estos cuatro valores en GitHub:',
+  '  repo > Settings > Secrets and variables > Actions > New repository secret',
+  '',
+  'ESTE ARCHIVO NO SE SUBE AL REPO (esta en .gitignore).',
+  'Cuando ya los tengas en GitHub, puedes borrarlo.',
+  '',
+  '----------------------------------------------------------',
+  `BLOGGER_CLIENT_ID=${CLIENT_ID}`,
+  `BLOGGER_CLIENT_SECRET=${CLIENT_SECRET}`,
+  `BLOGGER_REFRESH_TOKEN=${datos.refresh_token}`,
+];
 
 if (blogs.length > 0) {
-  console.log('\n  Tus blogs de Blogger:\n');
   for (const blog of blogs) {
-    console.log(`  BLOGGER_BLOG_ID         ${blog.id}   (${blog.name} - ${blog.url})`);
+    lineas.push(`BLOGGER_BLOG_ID=${blog.id}`);
+  }
+  lineas.push('----------------------------------------------------------', '', 'Tus blogs:');
+  for (const blog of blogs) {
+    lineas.push(`  ${blog.id}  ${blog.name}  ${blog.url}`);
   }
 } else {
-  console.log('\n  No encontre blogs en tu cuenta. Crea uno en https://blogger.com');
-  console.log('  y saca el blogId de la URL del panel (blogID=XXXXXXXX).');
+  lineas.push(
+    'BLOGGER_BLOG_ID=(no encontrado - crea un blog en https://blogger.com',
+    '                 y saca el blogId de la URL del panel: blogID=XXXXXXXX)',
+    '----------------------------------------------------------'
+  );
 }
 
-console.log('\n  El refresh token no caduca salvo que revoques el acceso.');
-console.log('  No lo subas al repo: va en Secrets.\n');
+await writeFile(ARCHIVO_SECRETOS, `${lineas.join('\n')}\n`, 'utf8');
+
+/** Muestra solo los extremos, para confirmar sin revelar el valor. */
+function enmascarar(valor) {
+  if (!valor || valor.length < 12) return '(corto)';
+  return `${valor.slice(0, 6)}...${valor.slice(-4)} (${valor.length} caracteres)`;
+}
+
+console.log('\n  ================================================');
+console.log('  LISTO');
+console.log('  ================================================\n');
+console.log(`  Refresh token obtenido: ${enmascarar(datos.refresh_token)}`);
+
+if (blogs.length > 0) {
+  console.log(`\n  Blogs encontrados en tu cuenta: ${blogs.length}`);
+  for (const blog of blogs) {
+    console.log(`    ${blog.name} - ${blog.url}`);
+  }
+} else {
+  console.log('\n  No encontre blogs en tu cuenta de Blogger.');
+  console.log('  Crea uno en https://blogger.com y vuelve a correr esto.');
+}
+
+console.log(`\n  Los cuatro valores estan en: ${path.basename(ARCHIVO_SECRETOS)}`);
+console.log('  Abre ese archivo y copia los valores a los Secrets del repo.');
+console.log('  No se imprimen aqui a proposito: la terminal se comparte, el archivo no.');
+console.log('\n  El refresh token no caduca salvo que revoques el acceso.\n');

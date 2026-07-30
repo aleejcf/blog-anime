@@ -5,3 +5,11 @@ dist/
 *.log
 .env
 .env.production
+
+# Credenciales de Blogger que genera scripts/obtener-token-blogger.mjs.
+# NUNCA se suben: dan acceso de escritura a tu blog.
+.blogger-credenciales.txt
+
+# Configuracion local del editor / servidor de desarrollo.
+# No hace falta para que el blog funcione ni para desplegarlo.
+.claude/
