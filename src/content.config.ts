@@ -33,7 +33,17 @@ const entradas = defineCollection({
 
     etiquetas: z.array(z.string()).default([]),
     puntuacion: z.number().min(0).max(10).optional(),
-    portada: z.string().url().optional(),
+
+    // Admite una direccion completa (https://...) o una ruta de tu propio
+    // sitio (/blog-anime/portadas/vol-02.jpg). Lo segundo es mas robusto:
+    // no depende de que otra web siga funcionando. Ver public/portadas/LEEME.md
+    portada: z
+      .string()
+      .refine((v) => /^https?:\/\//.test(v) || v.startsWith('/'), {
+        message:
+          'portada tiene que ser una direccion https:// completa o una ruta que empiece por / (ej: /blog-anime/portadas/vol-02.jpg)',
+      })
+      .optional(),
 
     // true = nunca se publica, ni cuando llega la fecha. Para trabajar tranquilo.
     borrador: z.boolean().default(false),

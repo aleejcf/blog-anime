@@ -19,6 +19,11 @@ const {
 
 const tituloCompleto = titulo ? `${titulo} — ${SITE_TITLE}` : `${SITE_TITLE} — ${SITE_SUBTITLE}`;
 const urlCanonica = new URL(Astro.url.pathname, Astro.site);
+
+// og:image tiene que ser una direccion absoluta: Facebook, WhatsApp y compania
+// descartan las rutas relativas y la entrada se comparte sin miniatura. Si la
+// portada ya es absoluta, new URL la deja igual.
+const imagenAbsoluta = imagen ? new URL(imagen, Astro.site).href : undefined;
 const anio = new Date().getUTCFullYear();
 
 // El feed RSS existe pero NO va en el menu: a un visitante normal le aparece
@@ -61,8 +66,8 @@ const reconstruido = new Intl.DateTimeFormat('es-ES', {
     <meta property="og:title" content={titulo ?? SITE_TITLE} />
     <meta property="og:description" content={descripcion} />
     <meta property="og:url" content={urlCanonica} />
-    {imagen && <meta property="og:image" content={imagen} />}
-    <meta name="twitter:card" content={imagen ? 'summary_large_image' : 'summary'} />
+    {imagenAbsoluta && <meta property="og:image" content={imagenAbsoluta} />}
+    <meta name="twitter:card" content={imagenAbsoluta ? 'summary_large_image' : 'summary'} />
   </head>
 
   <body>
