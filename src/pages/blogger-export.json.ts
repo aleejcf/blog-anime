@@ -13,7 +13,25 @@ import { experimental_AstroContainer as AstroContainer } from 'astro/container';
 import { loadRenderers } from 'astro:container';
 import { getContainerRenderer as mdxRenderer } from '@astrojs/mdx';
 
-export async function GET(_context: APIContext) {
+/**
+ * Convierte rutas propias del sitio en direcciones completas.
+ *
+ * En tu web una imagen puede ir como /blog-anime/portadas/vol-02.jpg, pero ese
+ * HTML se copia tal cual a Blogger, donde esa ruta apunta a
+ * aletempest.blogspot.com/blog-anime/... que no existe: imagen rota. Aqui se
+ * reescriben apuntando a tu sitio de GitHub Pages, que es donde viven de verdad.
+ *
+ * Las que ya son absolutas (https://...) y las de protocolo relativo (//...)
+ * se dejan como estan.
+ */
+function absolutizar(texto: string, sitio: URL): string {
+  return texto.replace(
+    /\b(src|href)="(\/(?!\/)[^"]*)"/g,
+    (_todo, atributo, ruta) => `${atributo}="${new URL(ruta, sitio).href}"`
+  );
+}
+
+export async function GET(context: APIContext) {
   const activado = process.env.EXPORTAR_BLOGGER === '1';
 
   if (!activado) {
@@ -32,9 +50,15 @@ export async function GET(_context: APIContext) {
   const contenedor = await AstroContainer.create({ renderers });
   const salida = [];
 
+  const sitio = context.site!;
+
   for (const entrada of entradas) {
     const { Content } = await render(entrada);
-    const html = await contenedor.renderToString(Content);
+    const html = absolutizar(await contenedor.renderToString(Content), sitio);
+
+    const portada = entrada.data.portada
+      ? new URL(entrada.data.portada, sitio).href
+      : null;
 
     salida.push({
       id: entrada.id,
@@ -47,7 +71,7 @@ export async function GET(_context: APIContext) {
       spoilers: entrada.data.spoilers,
       etiquetas: entrada.data.etiquetas,
       puntuacion: entrada.data.puntuacion ?? null,
-      portada: entrada.data.portada ?? null,
+      portada,
       html,
     });
   }
