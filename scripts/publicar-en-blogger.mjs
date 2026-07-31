@@ -289,12 +289,23 @@ for (const entrada of pendientes) {
     }
 
     if (idExistente) {
-      // Ya estaba: solo actualizamos el contenido.
+      // Ya estaba: se actualiza el contenido...
       await llamarBlogger(token, `/posts/${idExistente}`, {
         method: 'PATCH',
         body: JSON.stringify(cuerpo),
       });
-      console.log(`  actualizada  ${entrada.titulo}`);
+
+      // ...y tambien la fecha. PATCH no toca la programacion, asi que sin
+      // esto una entrada que cambia de dia se queda con el dia viejo en
+      // Blogger mientras en la web sale en el nuevo.
+      await llamarBlogger(
+        token,
+        `/posts/${idExistente}/publish?publishDate=${encodeURIComponent(entrada.fecha)}`,
+        { method: 'POST' }
+      );
+
+      const cuando = new Date(entrada.fecha) > new Date() ? 'reprogramada' : 'actualizada  ';
+      console.log(`  ${cuando} ${entrada.titulo}`);
     } else {
       // Nueva: se crea como borrador y se publica con la fecha que toque.
       const creada = await llamarBlogger(token, '/posts/?isDraft=true', {
