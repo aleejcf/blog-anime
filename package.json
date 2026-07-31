@@ -10,6 +10,7 @@
     "nueva": "node scripts/nueva-resena.mjs",
     "auto": "node scripts/generar-post-automatico.mjs",
     "cola": "node scripts/ver-cola.mjs",
+    "portadas": "node scripts/descargar-portadas.mjs",
     "exportar": "node scripts/exportar.mjs",
     "blogger": "node scripts/publicar-en-blogger.mjs",
     "token-blogger": "node scripts/obtener-token-blogger.mjs"
