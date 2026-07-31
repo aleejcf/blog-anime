@@ -25,17 +25,22 @@ portada: "/blog-anime/portadas/vol-03.jpg"
 npm run portadas
 ```
 
-Descarga las que falten desde Open Library. Ahora mismo consigue **12 de 23**:
-los volúmenes 1, 2, 3, 8, 9, 10, 11, 12, 13, 14, 15 y 17.
+Consigue **22 de 23**. Prueba dos fuentes en orden:
 
-Los otros once (4, 5, 6, 7, 16, 18, 19, 20, 21, 22, 23) no están catalogados
-con portada todavía. Open Library va añadiendo con el tiempo, así que vuelve a
-correr el comando dentro de unos meses y recogerá las nuevas — no vuelve a
-descargar las que ya tienes.
+1. **Open Library** (Internet Archive) — mejor calidad, 333x500 en JPEG.
+2. **Yen Press**, la propia editorial — 285x422, a veces en WebP. Cubre justo
+   los volúmenes recientes que Open Library todavía no ha catalogado.
+
+Falta solo el **volumen 23**, y por un motivo de fondo: Yen Press va por el 22
+en inglés, así que no existe ficha de la que sacar la portada. Cuando lo
+publiquen, vuelve a correr el comando y lo recogerá — no repite descargas.
 
 > **AniList no sirve para esto.** Solo guarda **una** imagen para toda la obra
 > (la del volumen 1), no una por volumen. Por eso todas las entradas salían con
 > la misma portada.
+
+Las imágenes pueden ser `.jpg` o `.webp` según la fuente. Da igual: el
+navegador entiende las dos, y `npm run revisar` acepta ambas.
 
 ## De dónde sacarlas
 

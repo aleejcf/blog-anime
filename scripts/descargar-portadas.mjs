@@ -56,11 +56,25 @@ const forzar = process.argv.includes('--forzar');
 
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/** Devuelve {datos, extension} o null. La extension sale del tipo real. */
 async function bajar(url) {
   const res = await fetch(url);
   if (!res.ok) return null;
+
   const buf = Buffer.from(await res.arrayBuffer());
-  return buf.length > MINIMO ? buf : null;
+  if (buf.length <= MINIMO) return null;
+
+  const tipo = res.headers.get('content-type') ?? '';
+  const extension = tipo.includes('webp') ? 'webp' : tipo.includes('png') ? 'png' : 'jpg';
+  return { datos: buf, extension };
+}
+
+/**
+ * Portada desde la propia editorial. Sirve las imagenes por ISBN, y solo
+ * acepta ese tamano exacto: con cualquier otro devuelve error 500.
+ */
+function urlYenPress(isbn) {
+  return `https://images.yenpress.com/imgs/${isbn}.jpg?w=285&h=422&type=books`;
 }
 
 /**
@@ -93,53 +107,83 @@ const yaEstaban = [];
 const sinSuerte = [];
 
 for (let vol = 1; vol <= TOTAL; vol++) {
-  const nombre = `vol-${String(vol).padStart(2, '0')}.jpg`;
-  const destino = path.join(DIR, nombre);
+  const base = `vol-${String(vol).padStart(2, '0')}`;
 
   if (!forzar) {
-    try {
-      await access(destino);
+    let existe = false;
+    for (const ext of ['jpg', 'webp', 'png']) {
+      try {
+        await access(path.join(DIR, `${base}.${ext}`));
+        existe = true;
+        break;
+      } catch {
+        // seguimos probando extensiones
+      }
+    }
+    if (existe) {
       yaEstaban.push(vol);
       continue;
-    } catch {
-      // no existe, seguimos
     }
   }
 
-  let datos = null;
+  let bajada = null;
+  let fuente = '';
 
-  // 1) por los ISBN que ya conocemos de Yen Press
+  // 1) Open Library por los ISBN conocidos. Da la mejor calidad (333x500).
   for (const isbn of ISBN[vol] ?? []) {
-    datos = await bajar(`https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`);
+    bajada = await bajar(`https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`);
     await esperar(300);
-    if (datos) break;
+    if (bajada) {
+      fuente = 'Open Library';
+      break;
+    }
   }
 
-  // 2) si no, se le pregunta a Open Library por otras ediciones del mismo
-  //    volumen: una puede no tener portada y otra si.
-  if (!datos) {
+  // 2) Open Library por otras ediciones: una puede no tener portada y otra si.
+  if (!bajada) {
     const { covers, isbns } = await buscarPistas(vol);
     await esperar(300);
 
     for (const id of covers) {
-      datos = await bajar(`https://covers.openlibrary.org/b/id/${id}-L.jpg`);
+      bajada = await bajar(`https://covers.openlibrary.org/b/id/${id}-L.jpg`);
       await esperar(300);
-      if (datos) break;
+      if (bajada) {
+        fuente = 'Open Library';
+        break;
+      }
     }
 
-    if (!datos) {
+    if (!bajada) {
       for (const isbn of isbns) {
-        datos = await bajar(`https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`);
+        bajada = await bajar(`https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`);
         await esperar(300);
-        if (datos) break;
+        if (bajada) {
+          fuente = 'Open Library';
+          break;
+        }
       }
     }
   }
 
-  if (datos) {
-    await writeFile(destino, datos);
+  // 3) la propia editorial. Mas pequena (285x422) pero casi siempre la tiene.
+  if (!bajada) {
+    for (const isbn of ISBN[vol] ?? []) {
+      bajada = await bajar(urlYenPress(isbn));
+      await esperar(300);
+      if (bajada) {
+        fuente = 'Yen Press';
+        break;
+      }
+    }
+  }
+
+  if (bajada) {
+    const nombre = `${base}.${bajada.extension}`;
+    await writeFile(path.join(DIR, nombre), bajada.datos);
     nuevas.push(vol);
-    console.log(`  vol ${String(vol).padStart(2)}  descargada  (${datos.length} bytes)`);
+    console.log(
+      `  vol ${String(vol).padStart(2)}  ${nombre.padEnd(12)} ${String(bajada.datos.length).padStart(6)} bytes  (${fuente})`
+    );
   } else {
     sinSuerte.push(vol);
     console.log(`  vol ${String(vol).padStart(2)}  no disponible`);

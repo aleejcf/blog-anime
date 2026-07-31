@@ -76,7 +76,7 @@ for (const [ruta, donde] of portadas) {
 // --- volumenes sin portada ---
 const hay = new Set(
   (await readdir(DIR_PORTADAS).catch(() => []))
-    .map((n) => Number(n.match(/^vol-(\d\d)\.jpg$/)?.[1]))
+    .map((n) => Number(n.match(/^vol-(\d\d)\.(?:jpg|webp|png)$/)?.[1]))
     .filter(Boolean)
 );
 const faltan = [];
