@@ -138,6 +138,39 @@ async function llamarBlogger(token, ruta, opciones = {}) {
   return cuerpo;
 }
 
+/**
+ * Trae lo que ya hay en Blogger, indexado por titulo.
+ *
+ * Sin esto se duplican entradas: si publicas desde tu maquina y ademas corre
+ * el workflow con un registro que todavia no incluye esa entrada, cada uno
+ * crea la suya y acabas con dos copias. Comprobar por titulo antes de crear
+ * hace que el script sea seguro aunque el registro venga desfasado.
+ */
+async function traerExistentes(token) {
+  const porTitulo = new Map();
+
+  for (const estado of ['live', 'draft']) {
+    let paginaToken;
+    do {
+      const params = new URLSearchParams({
+        maxResults: '100',
+        fetchBodies: 'false',
+        status: estado,
+        fields: 'items(id,title),nextPageToken',
+      });
+      if (paginaToken) params.set('pageToken', paginaToken);
+
+      const pagina = await llamarBlogger(token, `/posts?${params}`);
+      for (const p of pagina.items ?? []) {
+        if (!porTitulo.has(p.title)) porTitulo.set(p.title, p.id);
+      }
+      paginaToken = pagina.nextPageToken;
+    } while (paginaToken);
+  }
+
+  return porTitulo;
+}
+
 /** Envuelve el HTML de la entrada y le pega los estilos y una nota de origen. */
 function armarCuerpo(entrada) {
   const partes = [ESTILOS, '<div class="tempest">'];
@@ -227,8 +260,12 @@ if (simular) {
 }
 
 const token = await conseguirAccessToken();
+const existentes = await traerExistentes(token);
+console.log(`  Blogger ya tiene ${existentes.size} entradas; se comprueban por titulo.\n`);
+
 let subidas = 0;
 let fallos = 0;
+let adoptadas = 0;
 
 for (const entrada of pendientes) {
   const cuerpo = {
@@ -239,7 +276,15 @@ for (const entrada of pendientes) {
   };
 
   try {
-    const idExistente = registro[entrada.id];
+    // El registro manda; si no la tiene, se busca por titulo antes de crear.
+    let idExistente = registro[entrada.id];
+
+    if (!idExistente && existentes.has(entrada.titulo)) {
+      idExistente = existentes.get(entrada.titulo);
+      registro[entrada.id] = idExistente;
+      adoptadas++;
+      console.log(`  ya estaba en Blogger, se reutiliza: ${entrada.titulo}`);
+    }
 
     if (idExistente) {
       // Ya estaba: solo actualizamos el contenido.
@@ -280,6 +325,9 @@ for (const entrada of pendientes) {
 await writeFile(REGISTRO, `${JSON.stringify(registro, null, 2)}\n`, 'utf8');
 
 console.log(`\n  ${subidas} enviadas, ${fallos} con fallo.`);
+if (adoptadas > 0) {
+  console.log(`  ${adoptadas} ya existian en Blogger y se reutilizaron (no se duplicaron).`);
+}
 console.log(`  Registro guardado en ${path.relative(RAIZ, REGISTRO)} (haz commit).\n`);
 
 if (fallos > 0) process.exit(1);
