@@ -26,17 +26,27 @@ const DIR = path.join(RAIZ, 'public', 'portadas');
 // ISBN de la edicion inglesa (Yen Press). Sacados de las fichas de
 // yenpress.com/series/that-time-i-got-reincarnated-as-a-slime-light-novel
 const ISBN = {
-  1: '9780316414203',
-  2: '9781975301118',
-  8: '9781975312992',
-  9: '9781975314378',
-  10: '9781975314392',
-  11: '9781975314415',
-  12: '9781975314439',
-  13: '9781975314453',
-  14: '9781975314477',
-  15: '9781975314491',
-  17: '9781975375539',
+  1: ['9780316414203'],
+  2: ['9781975301118'],
+  4: ['9781975301156', '9781975301149'],
+  5: ['9781975301163'],
+  6: ['9781975301187'],
+  7: ['9781975301200'],
+  8: ['9781975312992'],
+  9: ['9781975314378'],
+  10: ['9781975314392'],
+  11: ['9781975314415'],
+  12: ['9781975314439'],
+  13: ['9781975314453'],
+  14: ['9781975314477'],
+  15: ['9781975314491'],
+  16: ['9781975369750'],
+  17: ['9781975375539'],
+  18: ['9781975375553'],
+  19: ['9781975375577'],
+  20: ['9781975375591'],
+  21: ['9798855403374'],
+  22: ['9798855425062'],
 };
 
 const TOTAL = 23;
@@ -53,15 +63,27 @@ async function bajar(url) {
   return buf.length > MINIMO ? buf : null;
 }
 
-/** Busca el identificador de portada de Open Library para ese volumen. */
-async function buscarPorTitulo(vol) {
-  const q = encodeURIComponent(`That Time I Got Reincarnated as a Slime, Vol. ${vol} (light novel)`);
-  const res = await fetch(`https://openlibrary.org/search.json?q=${q}&fields=title,cover_i&limit=8`);
-  if (!res.ok) return null;
+/**
+ * Pregunta a Open Library por ese volumen y devuelve TODAS las pistas que
+ * tenga: identificadores de portada e ISBN de cualquier edicion. Una sola
+ * edicion puede no tener portada mientras otra del mismo volumen si.
+ */
+async function buscarPistas(vol) {
+  const q = encodeURIComponent(`That Time I Got Reincarnated as a Slime Vol ${vol} light novel`);
+  const res = await fetch(
+    `https://openlibrary.org/search.json?q=${q}&fields=title,cover_i,isbn,edition_key&limit=20`
+  );
+  if (!res.ok) return { covers: [], isbns: [] };
 
   const { docs = [] } = await res.json();
-  const patron = new RegExp(`Vol\\.?\\s*${vol}\\b`, 'i');
-  return docs.find((d) => patron.test(d.title ?? '') && d.cover_i)?.cover_i ?? null;
+  // Solo el volumen exacto: "Vol. 3" no puede colarse en la busqueda del 13.
+  const patron = new RegExp(`Vol\\.?\\s*${vol}(?!\\d)`, 'i');
+  const suyos = docs.filter((d) => patron.test(d.title ?? ''));
+
+  return {
+    covers: [...new Set(suyos.map((d) => d.cover_i).filter(Boolean))],
+    isbns: [...new Set(suyos.flatMap((d) => d.isbn ?? []))].slice(0, 12),
+  };
 }
 
 await mkdir(DIR, { recursive: true });
@@ -86,19 +108,31 @@ for (let vol = 1; vol <= TOTAL; vol++) {
 
   let datos = null;
 
-  // 1) por ISBN, si lo conocemos
-  if (ISBN[vol]) {
-    datos = await bajar(`https://covers.openlibrary.org/b/isbn/${ISBN[vol]}-L.jpg`);
+  // 1) por los ISBN que ya conocemos de Yen Press
+  for (const isbn of ISBN[vol] ?? []) {
+    datos = await bajar(`https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`);
     await esperar(300);
+    if (datos) break;
   }
 
-  // 2) si no, buscando por titulo
+  // 2) si no, se le pregunta a Open Library por otras ediciones del mismo
+  //    volumen: una puede no tener portada y otra si.
   if (!datos) {
-    const coverId = await buscarPorTitulo(vol);
+    const { covers, isbns } = await buscarPistas(vol);
     await esperar(300);
-    if (coverId) {
-      datos = await bajar(`https://covers.openlibrary.org/b/id/${coverId}-L.jpg`);
+
+    for (const id of covers) {
+      datos = await bajar(`https://covers.openlibrary.org/b/id/${id}-L.jpg`);
       await esperar(300);
+      if (datos) break;
+    }
+
+    if (!datos) {
+      for (const isbn of isbns) {
+        datos = await bajar(`https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`);
+        await esperar(300);
+        if (datos) break;
+      }
     }
   }
 
