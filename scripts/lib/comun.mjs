@@ -76,6 +76,25 @@ export function hoyUTC() {
   return new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), ahora.getUTCDate()));
 }
 
+/**
+ * El dia de hoy SEGUN TU RELOJ, no segun UTC.
+ *
+ * A las 22:00 en Honduras ya es el dia siguiente en UTC, asi que usar hoyUTC()
+ * para calcular "manana" se salta un dia entero. Esto devuelve el dia que
+ * marca tu calendario.
+ */
+export function hoyLocal(zona) {
+  // en-CA da el formato aaaa-mm-dd, que es justo lo que necesitamos.
+  const dia = new Intl.DateTimeFormat('en-CA', {
+    timeZone: zona,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+
+  return new Date(`${dia}T00:00:00Z`);
+}
+
 export function sumarDias(fecha, dias) {
   const copia = new Date(fecha.getTime());
   copia.setUTCDate(copia.getUTCDate() + dias);

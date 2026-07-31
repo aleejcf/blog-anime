@@ -12,6 +12,7 @@
     "cola": "node scripts/ver-cola.mjs",
     "portadas": "node scripts/descargar-portadas.mjs",
     "revisar": "node scripts/revisar.mjs",
+    "reordenar": "node scripts/reordenar.mjs",
     "exportar": "node scripts/exportar.mjs",
     "blogger": "node scripts/publicar-en-blogger.mjs",
     "token-blogger": "node scripts/obtener-token-blogger.mjs"
