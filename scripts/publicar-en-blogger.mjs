@@ -149,7 +149,9 @@ async function llamarBlogger(token, ruta, opciones = {}) {
 async function traerExistentes(token) {
   const porTitulo = new Map();
 
-  for (const estado of ['live', 'draft']) {
+  // Los tres estados. Si falta 'scheduled', una entrada programada no se ve y
+  // se acaba creando un duplicado: paso exactamente eso con el volumen 3.
+  for (const estado of ['live', 'scheduled', 'draft']) {
     let paginaToken;
     do {
       const params = new URLSearchParams({
