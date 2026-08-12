@@ -7,14 +7,23 @@
  * Antes de correr esto hace falta el export de Astro:
  *
  *   npm run exportar        (build con EXPORTAR_BLOGGER=1)
- *   npm run blogger         (sube lo que falte)
+ *   npm run blogger         (sube lo que falte, hasta LIMITE_POR_DEFECTO por corrida)
  *   npm run blogger -- --actualizar   (reenvia tambien las ya subidas)
  *   npm run blogger -- --simular      (no toca nada, solo dice que haria)
+ *   npm run blogger -- --limite=10    (cambia cuantas se intentan en esta corrida)
  *
  * Necesita cuatro variables de entorno (en Actions van como Secrets):
  *   BLOGGER_BLOG_ID, BLOGGER_CLIENT_ID, BLOGGER_CLIENT_SECRET, BLOGGER_REFRESH_TOKEN
  *
  * Lleva la cuenta de lo subido en blogger-publicados.json para no duplicar.
+ *
+ * La cuota de la API de Blogger es limitada: el 2026-08-09, al subir 52 de
+ * golpe, se cortó a los 5 posts con error 429 (quota exhausted), y dos
+ * reintentos el mismo dia fallaron igual. Por eso esto se autolimita por
+ * corrida (LIMITE_POR_DEFECTO) y, si aun asi llega un 429, para en seco en
+ * vez de seguir gastando peticiones que van a fallar igual. El workflow
+ * (.github/workflows/blogger.yml) corre periodicamente, asi que lo que quede
+ * pendiente se sube solo en la siguiente corrida.
  */
 
 import { readFile, writeFile } from 'node:fs/promises';
@@ -29,6 +38,18 @@ const { BLOGGER_BLOG_ID, BLOGGER_CLIENT_ID, BLOGGER_CLIENT_SECRET, BLOGGER_REFRE
 
 const simular = process.argv.includes('--simular');
 const actualizar = process.argv.includes('--actualizar');
+
+// 5 fue justo lo que aguanto la cuota antes del 429 el 2026-08-09. Se deja
+// algo de margen por debajo para las llamadas de traerExistentes() y el
+// token, que tambien cuentan contra la cuota.
+const LIMITE_POR_DEFECTO = 4;
+const argLimite = process.argv.find((a) => a.startsWith('--limite='));
+const limite = argLimite ? Number(argLimite.split('=')[1]) : LIMITE_POR_DEFECTO;
+
+if (!Number.isFinite(limite) || limite <= 0) {
+  console.error('\n  --limite debe ser un numero mayor que 0.\n');
+  process.exit(1);
+}
 
 if (!simular) {
   const faltan = [
@@ -239,15 +260,26 @@ try {
   // Primera vez: registro vacio.
 }
 
-const pendientes = entradas.filter((e) => actualizar || !registro[e.id]);
+const todasPendientes = entradas.filter((e) => actualizar || !registro[e.id]);
 
-if (pendientes.length === 0) {
+if (todasPendientes.length === 0) {
   console.log(`\n  Todo al dia: las ${entradas.length} entradas ya estan en Blogger.`);
   console.log('  (usa --actualizar para reenviarlas)\n');
   process.exit(0);
 }
 
-console.log(`\n  ${entradas.length} entradas en el export, ${pendientes.length} por subir.`);
+// Se suben en orden de fecha (asi vienen del export) y solo hasta el limite:
+// el resto espera a la siguiente corrida para no volver a topar la cuota.
+const pendientes = todasPendientes.slice(0, limite);
+const enEspera = todasPendientes.length - pendientes.length;
+
+console.log(
+  `\n  ${entradas.length} entradas en el export, ${todasPendientes.length} por subir.` +
+    ` Esta corrida intenta ${pendientes.length} (limite ${limite}).`
+);
+if (enEspera > 0) {
+  console.log(`  ${enEspera} quedan para corridas siguientes.`);
+}
 
 if (simular) {
   console.log('  MODO SIMULACION: no se envia nada.\n');
@@ -268,6 +300,7 @@ console.log(`  Blogger ya tiene ${existentes.size} entradas; se comprueban por t
 let subidas = 0;
 let fallos = 0;
 let adoptadas = 0;
+let cuotaAgotada = false;
 
 for (const entrada of pendientes) {
   const cuerpo = {
@@ -330,6 +363,15 @@ for (const entrada of pendientes) {
 
     subidas++;
   } catch (error) {
+    // 429 = cuota agotada: no es un problema de esta entrada en concreto, y
+    // las siguientes van a fallar igual. Mejor parar ya y guardar lo logrado
+    // que seguir gastando peticiones contra una cuota que ya esta a cero.
+    if (error.message.includes('Blogger 429')) {
+      cuotaAgotada = true;
+      console.error(`\n  Cuota de Blogger agotada en "${entrada.titulo}". Se detiene esta corrida.`);
+      break;
+    }
+
     fallos++;
     console.error(`  FALLO en "${entrada.titulo}": ${error.message}`);
   }
@@ -337,10 +379,17 @@ for (const entrada of pendientes) {
 
 await writeFile(REGISTRO, `${JSON.stringify(registro, null, 2)}\n`, 'utf8');
 
+const faltanTotal = enEspera + (cuotaAgotada ? pendientes.length - subidas - fallos : 0);
+
 console.log(`\n  ${subidas} enviadas, ${fallos} con fallo.`);
 if (adoptadas > 0) {
   console.log(`  ${adoptadas} ya existian en Blogger y se reutilizaron (no se duplicaron).`);
 }
+if (faltanTotal > 0) {
+  console.log(`  ${faltanTotal} quedan pendientes; se suben solas en la siguiente corrida.`);
+}
 console.log(`  Registro guardado en ${path.relative(RAIZ, REGISTRO)} (haz commit).\n`);
 
+// La cuota agotada no es un fallo real (se resuelve sola con el tiempo): no
+// hace falta que el workflow salga en rojo y mande correo por eso.
 if (fallos > 0) process.exit(1);

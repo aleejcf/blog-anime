@@ -7,6 +7,14 @@ on:
     paths:
       - 'src/content/entradas/**'
 
+  # La API de Blogger tiene cuota limitada: subir muchas de golpe la agota
+  # (paso el 2026-08-09 con 52 entradas nuevas, corto a los 5 posts con
+  # error 429). El script ya se autolimita por corrida, y este cron hace que
+  # lo pendiente se vaya drenando solo, un poco cada vez, sin que haga falta
+  # ni acordarse ni volver a mandarlo todo junto.
+  schedule:
+    - cron: '15 5 * * *'
+
   workflow_dispatch:
 
 # Un solo envio a la vez, para no duplicar entradas si se solapan dos runs.
