@@ -39,10 +39,13 @@ const { BLOGGER_BLOG_ID, BLOGGER_CLIENT_ID, BLOGGER_CLIENT_SECRET, BLOGGER_REFRE
 const simular = process.argv.includes('--simular');
 const actualizar = process.argv.includes('--actualizar');
 
-// 5 fue justo lo que aguanto la cuota antes del 429 el 2026-08-09. Se deja
-// algo de margen por debajo para las llamadas de traerExistentes() y el
-// token, que tambien cuentan contra la cuota.
-const LIMITE_POR_DEFECTO = 4;
+// El 2026-08-09 la cuota corto a los 5 posts nuevos en una sola corrida.
+// Bajarlo a 4 no alcanzo: varias cuentas de prueba se bloquearon igual con
+// solo 4-6 creados de golpe. Lo que si funciono semanas seguidas sin
+// problema (2026-07-29 a 2026-08-07) fue crear como maximo UNA entrada
+// nueva por corrida, una vez al dia. Asi que el limite por defecto vuelve
+// a ese patron comprobado: una por vez, todos los dias, sin ráfagas.
+const LIMITE_POR_DEFECTO = 1;
 const argLimite = process.argv.find((a) => a.startsWith('--limite='));
 const limite = argLimite ? Number(argLimite.split('=')[1]) : LIMITE_POR_DEFECTO;
 
